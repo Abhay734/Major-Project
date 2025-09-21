@@ -21,6 +21,8 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log(profile);
+        
         console.log("Google auth tokens received:", {
           accessTokenReceived: !!accessToken,
           refreshTokenReceived: !!refreshToken,
@@ -31,7 +33,7 @@ passport.use(
           $or: [{ googleId: profile.id }, { email: profile.emails[0].value }],
         });
 
-        console.log(user);
+        // console.log(user);
 
         if (user) {
           // Update the existing user with new details and tokens

@@ -15,7 +15,6 @@ const getOAuth2Client = async (userId) => {
             throw new Error('User not found');
         }
 
-        // Add this check to handle cases where googleTokens is missing
         if (!user.googleTokens) {
             console.error(`User ${userId} has no Google tokens. Authentication required.`);
             throw new Error('User has no Google credentials. Please re-authenticate.');
@@ -27,18 +26,29 @@ const getOAuth2Client = async (userId) => {
             `${process.env.SERVER_URL}/api/auth/google/callback`
         );
 
-        // Set credentials from the database
         oauth2Client.setCredentials({
             access_token: user.googleTokens.access_token,
             refresh_token: user.googleTokens.refresh_token,
             expiry_date: user.googleTokens.expiry_date
         });
 
-        // ... (rest of the function remains the same)
-        if (user.googleTokens.refresh_token) {
-            // ... (existing token refresh logic)
-        } else {
-            console.warn(`User ${userId} has no refresh token - token refreshing unavailable`);
+        // Check if token needs refresh
+        if (oauth2Client.isTokenExpiring()) {
+            console.log('Token is expiring, attempting refresh...');
+            try {
+                const { credentials } = await oauth2Client.refreshAccessToken();
+                oauth2Client.setCredentials(credentials);
+                
+                // Update user's tokens in database
+                await User.findByIdAndUpdate(userId, {
+                    'googleTokens.access_token': credentials.access_token,
+                    'googleTokens.expiry_date': credentials.expiry_date
+                });
+                console.log('Token refreshed successfully');
+            } catch (refreshError) {
+                console.error('Token refresh failed:', refreshError);
+                throw new Error('Token refresh failed. Please re-authenticate.');
+            }
         }
 
         return oauth2Client;
@@ -52,7 +62,9 @@ const getOAuth2Client = async (userId) => {
 
 export const sendEmail = async (req, res) => {
     const { to, subject, body } = req.body;
-    const userId = req.user._id; // Assuming user ID is available from authentication middleware
+    console.log('req.user:', req.user); // Add this line
+    
+    const userId = req.user.id; // Assuming user ID is available from authentication middleware
     console.log('sendEmail called with userId:', userId); // Add this line
 
     if (!to || !subject || !body) {
@@ -85,7 +97,7 @@ export const sendEmail = async (req, res) => {
         const info = await transporter.sendMail(mailOptions);
         res.status(200).json({ success: true, messageId: info.messageId, message: 'Email sent successfully' });
     } catch (error) {
-        console.error('Send email error:', error.message);
+        console.error('Send email error:', error);
         if (error.response) {
             console.error('Error Response:', error.response.data);
         } else {
