@@ -1,25 +1,23 @@
 'use client';
 
-// import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-// import Header from '@/components/Header';
 import axios from 'axios';
-// import EmailGeneratorSimple from '@/components/email-generator-simple';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
+import { Toaster, toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 export default function ComposePage() {
-  // console.log(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
-  // const { user, loading } = useAuth();
   const router = useRouter();
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+    const storedToken = localStorage.getItem('authToken');
+    if (!storedToken) {
       router.push('/login');
+    } else {
+      setToken(storedToken);
     }
   }, [router]);
-
 
   const [formData, setFormData] = useState({
     to: '',
@@ -28,34 +26,25 @@ export default function ComposePage() {
   });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSending, setIsSending] = useState(false);
-  const [isSimpleMode, setIsSimpleMode] = useState(true); // State to toggle between modes
-
-  const handleTabChange = (value) => {
-    setIsSimpleMode(value === 'simple');
-  };
-
-  // useEffect(() => {
-  //   if (!loading && !user) {
-  //     router.push('/login');
-  //   }
-  // }, [user, loading, router]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Simple validation
+    // Validation
     if (!formData.to || !formData.subject || !formData.body) {
-      setStatus({
-        type: 'error',
-        message: 'Please fill in all fields'
-      });
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.to)) {
+      toast.error('Please enter a valid email address');
       return;
     }
 
@@ -63,22 +52,22 @@ export default function ComposePage() {
     setStatus({ type: '', message: '' });
 
     try {
-      const token = localStorage.getItem("authToken");
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/email/send`,
         formData,
         {
-          // withCredentials: true,
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         }
       );
 
       if (response.data.success) {
+        toast.success('Email sent successfully!');
         setStatus({
           type: 'success',
-          message: 'Email sent successfully!'
+          message: `Email sent successfully! Message ID: ${response.data.messageId}`
         });
 
         // Reset form
@@ -89,73 +78,68 @@ export default function ComposePage() {
         });
       }
     } catch (error) {
+      console.error('Email sending error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to send email';
+      toast.error(errorMessage);
       setStatus({
         type: 'error',
-        message: error.response?.data?.message || 'Failed to send email'
+        message: errorMessage
       });
     } finally {
       setIsSending(false);
     }
   };
 
-  // if (loading || !user) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-  //     </div>
-  //   );
-  // }
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* <Header /> */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <Toaster position="top-center" />
+      
       <main className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Email Generator Section */}
-          <div className="bg-slate-900 rounded-lg shadow p-6 border border-slate-800">
-            {/* <Tabs
-              value={isSimpleMode ? 'simple' : 'advanced'}
-              onValueChange={handleTabChange}
-              className="w-full"
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.h1 
+              className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              <TabsList className="mb-4 bg-slate-800 border border-slate-700 rounded-lg">
-                <TabsTrigger value="simple" className="data-[state=active]:bg-sky-700 data-[state=active]:text-white text-slate-300">Simple Email Generator</TabsTrigger>
-                <TabsTrigger value="advanced" className="data-[state=active]:bg-sky-700 data-[state=active]:text-white text-slate-300">Advanced Email Generator</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="simple">
-                <EmailGeneratorSimple
-                  onAddToMessage={html =>
-                    setFormData(prev => ({ ...prev, body: html }))
-                  }
-                />
-              </TabsContent>
-              <TabsContent value="advanced">
-                <EmailGenerator
-                  onAddToMessage={html =>
-                    setFormData(prev => ({ ...prev, body: html }))
-                  }
-                />
-              </TabsContent>
-            </Tabs> */}
-          </div>
-
-          {/* Compose Email Section */}
-          <div className="bg-slate-900 rounded-lg shadow p-6 border border-slate-800">
-            <h1 className="text-2xl font-bold mb-6 text-slate-100">Compose Email</h1>
+              Compose Email
+            </motion.h1>
 
             {status.message && (
-              <div className={`p-4 mb-6 rounded ${status.type === 'success'
-                ? 'bg-green-900 text-green-300 border border-green-700'
-                : 'bg-red-900 text-red-300 border border-red-700'
-                }`}>
+              <motion.div 
+                className={`p-4 mb-6 rounded-lg ${status.type === 'success'
+                  ? 'bg-green-100 text-green-800 border border-green-200'
+                  : 'bg-red-100 text-red-800 border border-red-200'
+                }`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
                 {status.message}
-              </div>
+              </motion.div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label htmlFor="to" className="block text-slate-200 font-medium mb-2">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <label htmlFor="to" className="block text-slate-700 dark:text-slate-200 font-semibold mb-2">
                   To:
                 </label>
                 <input
@@ -164,13 +148,17 @@ export default function ComposePage() {
                   name="to"
                   value={formData.to}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-slate-700 rounded-md bg-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   placeholder="recipient@example.com"
                 />
-              </div>
+              </motion.div>
 
-              <div className="mb-4">
-                <label htmlFor="subject" className="block text-slate-200 font-medium mb-2">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <label htmlFor="subject" className="block text-slate-700 dark:text-slate-200 font-semibold mb-2">
                   Subject:
                 </label>
                 <input
@@ -179,13 +167,17 @@ export default function ComposePage() {
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-slate-700 rounded-md bg-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   placeholder="Email subject"
                 />
-              </div>
+              </motion.div>
 
-              <div className="mb-6">
-                <label htmlFor="body" className=" text-black font-medium mb-2">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <label htmlFor="body" className="block text-slate-700 dark:text-slate-200 font-semibold mb-2">
                   Message:
                 </label>
                 <textarea
@@ -193,13 +185,29 @@ export default function ComposePage() {
                   name="body"
                   value={formData.body}
                   onChange={handleChange}
-                  rows="10"
-                  className="w-full px-4 py-2 border border-slate-700 rounded-md bg-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono text-sm"
-                  placeholder="Your email content will appear here..."
+                  rows="12"
+                  className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+                  placeholder="Write your email content here..."
                 ></textarea>
-              </div>
+              </motion.div>
 
-              <div className="flex justify-end">
+              <motion.div 
+                className="flex justify-end space-x-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({ to: '', subject: '', body: '' });
+                    toast.success('Form cleared');
+                  }}
+                  className="px-6 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                >
+                  Clear
+                </button>
+                
                 <button
                   type="submit"
                   disabled={
@@ -208,19 +216,56 @@ export default function ComposePage() {
                     !formData.subject.trim() ||
                     !formData.body.trim()
                   }
-                  className={`px-6 py-2 rounded-md text-white font-medium ${
+                  className={`px-8 py-3 rounded-lg text-white font-semibold transition ${
                     isSending
-                      ? 'bg-sky-400'
+                      ? 'bg-blue-400 cursor-not-allowed'
                       : (!formData.to.trim() || !formData.subject.trim() || !formData.body.trim())
-                      ? 'bg-slate-700 cursor-not-allowed'
-                      : 'bg-sky-600 hover:bg-sky-700'
-                  } transition`}
+                      ? 'bg-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 shadow-lg'
+                  }`}
                 >
-                  {isSending ? 'Sending...' : 'Send Email'}
+                  {isSending ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                      <span>Sending...</span>
+                    </div>
+                  ) : (
+                    'Send Email'
+                  )}
                 </button>
-              </div>
+              </motion.div>
             </form>
-          </div>
+
+            {/* Email Preview */}
+            {(formData.to || formData.subject || formData.body) && (
+              <motion.div
+                className="mt-8 p-6 bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+              >
+                <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Email Preview</h3>
+                <div className="space-y-2 text-sm">
+                  {formData.to && (
+                    <p><span className="font-medium">To:</span> {formData.to}</p>
+                  )}
+                  {formData.subject && (
+                    <p><span className="font-medium">Subject:</span> {formData.subject}</p>
+                  )}
+                  {formData.body && (
+                    <div>
+                      <p className="font-medium mb-2">Message:</p>
+                      <div className="bg-white dark:bg-slate-800 p-4 rounded border max-h-40 overflow-y-auto">
+                        {formData.body.split('\n').map((line, index) => (
+                          <p key={index} className="mb-1">{line}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
       </main>
     </div>

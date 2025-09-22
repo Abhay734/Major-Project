@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import { google } from 'googleapis';
 import User from '../models/userModel.js';
 
-console.log(User);
+// console.log(User);
 
 
 // Fixed OAuth2 client setup and token refresh
@@ -62,10 +62,13 @@ const getOAuth2Client = async (userId) => {
 
 export const sendEmail = async (req, res) => {
     const { to, subject, body } = req.body;
-    console.log('req.user:', req.user); // Add this line
-    
+    const userData = await User.findById(req.user.id);
+    if (!userData) {
+        return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    // console.log('req.user:', userData); // Add this line
     const userId = req.user.id; // Assuming user ID is available from authentication middleware
-    console.log('sendEmail called with userId:', userId); // Add this line
+    // console.log('sendEmail called with userId:', userId); // Add this line
 
     if (!to || !subject || !body) {
         return res.status(400).json({ success: false, message: 'Recipient, subject, and body are required.' });
@@ -74,12 +77,13 @@ export const sendEmail = async (req, res) => {
     try {
         const oauth2Client = await getOAuth2Client(userId);
         const accessToken = oauth2Client.credentials.access_token;
-
+        console.log('client id : ', oauth2Client.credentials);
+        
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 type: 'OAuth2',
-                user: req.user.email, // Assuming user email is available
+                user: userData.email, // Assuming user email is available
                 clientId: process.env.GOOGLE_CLIENT_ID,
                 clientSecret: process.env.GOOGLE_CLIENT_SECRET,
                 refreshToken: oauth2Client.credentials.refresh_token,

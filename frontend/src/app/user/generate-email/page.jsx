@@ -25,31 +25,31 @@ const GenerateEmail = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedToken = localStorage.getItem('token');
+      const storedToken = localStorage.getItem('authToken');
       setToken(storedToken);
     }
   }, []);
 
-  const saveEmail = () => {
+  const saveEmail = async () => {
     if (!token) {
       toast.error('You must be logged in to save an email.');
       return;
     }
 
-    axios.post(`${process.env.NEXT_PUBLIC_API_URL}/template/add`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }, {
-      content: result,
-      prompt: formik.values.scenario,
-    })
-      .then(() => {
-        toast.success('Email saved as template!');
-      }).catch((err) => {
-        console.log(err);
-        toast.error(err.response?.data?.message || 'Failed to save email as template.');
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/template/add`, {
+        content: result,
+        prompt: formik.values.scenario,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
+      toast.success('Email saved as template!');
+    } catch (err) {
+      console.log(err);
+      toast.error(err.response?.data?.message || 'Failed to save email as template.');
+    }
   };
 
   const formik = useFormik({
@@ -62,7 +62,12 @@ const GenerateEmail = () => {
     onSubmit: async (values, { setSubmitting }) => {
       setResult('');
       try {
-        const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generator/generate`, { scenario: values.scenario });
+        const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generator/generate`, { 
+          scenario: values.scenario 
+        }, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
         let emailHtml = '';
         if (res.data.email) {
           const htmlMatch = res.data.email.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
@@ -70,7 +75,7 @@ const GenerateEmail = () => {
             emailHtml = htmlMatch[1];
           } else {
             const htmlTags = res.data.email.match(/<[^>]+>[\s\S]*?<\/[^>]+>/g);
-            emailHtml = htmlTags ? htmlTags.join('') : '';
+            emailHtml = htmlTags ? htmlTags.join('') : res.data.email;
           }
           setResult(emailHtml);
           toast.success('Email generated!');
@@ -110,7 +115,9 @@ const GenerateEmail = () => {
 
         <form onSubmit={formik.handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="scenario" className="block mb-2 font-semibold">Scenario</label>
+            <label htmlFor="scenario" className="block mb-2 font-semibold text-gray-700 dark:text-gray-300">
+              Scenario
+            </label>
             <textarea
               id="scenario"
               name="scenario"
@@ -118,7 +125,8 @@ const GenerateEmail = () => {
               value={formik.values.scenario}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 transition"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white transition"
+              placeholder="Describe the email you want to generate..."
               required
             />
             {formik.touched.scenario && formik.errors.scenario ? (
@@ -146,45 +154,37 @@ const GenerateEmail = () => {
           >
             <div className="w-full p-6 bg-gray-50 dark:bg-neutral-800 rounded-2xl shadow-inner border border-gray-200 dark:border-neutral-700">
               <h3 className="text-xl font-semibold mb-4 text-center text-gray-800 dark:text-gray-200">
-                Preview Email
+                Generated Email Preview
               </h3>
 
               <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-md">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Subject:</p>
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                  {formik.values.scenario}
-                </h4>
-
                 <div
-                  className="prose prose-sm dark:prose-invert max-w-none"
+                  className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200"
                   dangerouslySetInnerHTML={{ __html: result.replace(/\n/g, '<br/>') }}
                 />
-
-                <div className="mt-6 border-t pt-4 text-sm text-gray-500 dark:text-gray-400">
-                  <p>Best regards,</p>
-                  <p>Your Company</p>
-                </div>
               </div>
 
-              <div className="flex justify-center">
+              <div className="flex justify-center space-x-4 mt-6">
                 <motion.button
-                  onClick={async () => {
-                    try {
-                      await axios.post('http://localhost:5000/template/add', {
-                        user: "64b1234567abc890def12345",
-                        prompt: formik.values.scenario,
-                        content: result,
-                      });
-                      toast.success('Template saved!');
-                    } catch (err) {
-                      toast.error(err.response?.data?.message || 'Failed to save template');
-                    }
-                  }}
-                  className="mt-6 py-2 px-6 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-md"
+                  onClick={saveEmail}
+                  className="py-2 px-6 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-md transition"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Save Template
+                  Save as Template
+                </motion.button>
+                
+                <motion.button
+                  onClick={() => {
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(result);
+                    toast.success('Email copied to clipboard!');
+                  }}
+                  className="py-2 px-6 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-md transition"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Copy to Clipboard
                 </motion.button>
               </div>
             </div>
@@ -192,7 +192,7 @@ const GenerateEmail = () => {
         )}
       </motion.div>
 
-      {/* Section with image and text */}
+      {/* Why MailSmith Section */}
       <motion.div
         className="w-full max-w-5xl mt-16 grid grid-cols-1 md:grid-cols-2 gap-10 items-center"
         initial={{ opacity: 0, y: 40 }}

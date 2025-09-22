@@ -15,7 +15,7 @@ export const authenticate = (req, res, next) => {
                 console.log(err);
                 return res.status(403).json({ message: "Invalid token" });
             }
-            console.log(data);
+            // console.log(data);
             req.user = data // <--- CHANGE THIS LINE
             // console.log(req.user);
             next();
