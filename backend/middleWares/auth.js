@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
+console.log('auth.js module loaded');
 
-export const authenticate = (req, res, next) => {
+const authenticate = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1];
     // console.log(token);
     if (!token) {
@@ -24,4 +25,5 @@ export const authenticate = (req, res, next) => {
         console.error(err);
         res.status(500).json({ message: "Server Error" });
     }
-};
+}; 
+export { authenticate }; 
