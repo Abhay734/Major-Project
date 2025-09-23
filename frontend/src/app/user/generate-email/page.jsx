@@ -13,6 +13,7 @@ const GenerateEmail = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const router = useRouter();
+  
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
