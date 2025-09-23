@@ -52,7 +52,7 @@ router.get('/getbyid/:id', (req, res) => {
 router.get('/getuser', authenticate, (req, res) => {
     console.log(req.user);
     
-    UserModel.findById(req.user._id)
+    UserModel.findById(req.user.id)
         .then((result) => {
             res.status(200).json(result);
         }).catch((err) => {

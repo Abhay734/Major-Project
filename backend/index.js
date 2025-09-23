@@ -28,4 +28,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log('express server has started');
 });
-

@@ -5,23 +5,14 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-
-const Footer = () => (
-  <footer className="bg-gray-900 text-gray-300 py-8 mt-12">
-    <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-      <p>© {new Date().getFullYear()} MailSmith. All rights reserved.</p>
-      <div className="flex space-x-6">
-        <a href="/about" className="hover:text-white transition">About</a>
-        <a href="/contact" className="hover:text-white transition">Contact</a>
-        <a href="/privacy" className="hover:text-white transition">Privacy Policy</a>
-      </div>
-    </div>
-  </footer>
-);
+import { useRouter } from 'next/navigation';
 
 const GenerateEmail = () => {
   const [result, setResult] = useState('');
   const [token, setToken] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -55,15 +46,22 @@ const GenerateEmail = () => {
   const formik = useFormik({
     initialValues: {
       scenario: '',
+      purpose: '',
+      subject: '',
+      tone: 'professional',
     },
     validationSchema: Yup.object({
       scenario: Yup.string().required('Scenario is required'),
     }),
-    onSubmit: async (values, { setSubmitting }) => {
+    onSubmit: async (values) => {
       setResult('');
+      setIsGenerating(true);
       try {
         const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generator/generate`, { 
-          scenario: values.scenario 
+          scenario: values.scenario,
+          purpose: values.purpose,
+          subject: values.subject,
+          tone: values.tone,
         }, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
@@ -84,8 +82,9 @@ const GenerateEmail = () => {
         }
       } catch (err) {
         toast.error(err.response?.data?.message || 'AI service unavailable');
+      } finally {
+        setIsGenerating(false);
       }
-      setSubmitting(false);
     },
   });
 
@@ -134,15 +133,92 @@ const GenerateEmail = () => {
             ) : null}
           </div>
 
-          <motion.button
-            type="submit"
-            className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:opacity-90 transition disabled:opacity-50"
-            disabled={formik.isSubmitting}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: showAdvanced ? 'auto' : 0, opacity: showAdvanced ? 1 : 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
           >
-            {formik.isSubmitting ? 'Generating...' : 'Generate Email'}
-          </motion.button>
+            <div className="p-4 bg-gray-100 dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 space-y-4">
+              <h4 className="font-semibold text-gray-800 dark:text-gray-200">Advanced Options</h4>
+              <div>
+                <label htmlFor="purpose" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Purpose
+                </label>
+                <input
+                  type="text"
+                  id="purpose"
+                  name="purpose"
+                  value={formik.values.purpose}
+                  onChange={formik.handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                  placeholder="e.g., Follow-up, cold outreach, marketing"
+                />
+              </div>
+              <div>
+                <label htmlFor="subject" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  id="subject"
+                  name="subject"
+                  value={formik.values.subject}
+                  onChange={formik.handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                  placeholder="Enter a specific subject line"
+                />
+              </div>
+              <div>
+                <label htmlFor="tone" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Tone
+                </label>
+                <select
+                  id="tone"
+                  name="tone"
+                  value={formik.values.tone}
+                  onChange={formik.handleChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg dark:bg-neutral-700 dark:border-neutral-600 dark:text-white"
+                >
+                  <option value="professional">Professional</option>
+                  <option value="casual">Casual</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="formal">Formal</option>
+                  <option value="persuasive">Persuasive</option>
+                </select>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="flex justify-between items-center space-x-4">
+            <motion.button
+              type="submit"
+              className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center"
+              disabled={isGenerating}
+              whileHover={{ scale: isGenerating ? 1 : 1.05 }}
+              whileTap={{ scale: isGenerating ? 1 : 0.95 }}
+            >
+              {isGenerating ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : 'Generate Email'}
+            </motion.button>
+            
+            <motion.button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="py-3 px-4 bg-gray-200 dark:bg-neutral-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold shadow-lg hover:bg-gray-300 dark:hover:bg-neutral-600 transition"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {showAdvanced ? 'Hide Advanced' : 'Advanced Options'}
+            </motion.button>
+          </div>
         </form>
 
         {result && (
@@ -176,7 +252,6 @@ const GenerateEmail = () => {
                 
                 <motion.button
                   onClick={() => {
-                    // Copy to clipboard
                     navigator.clipboard.writeText(result);
                     toast.success('Email copied to clipboard!');
                   }}
@@ -186,13 +261,25 @@ const GenerateEmail = () => {
                 >
                   Copy to Clipboard
                 </motion.button>
+
+                <motion.button
+                  onClick={() => {
+                    localStorage.setItem('draftEmail', result);
+                    localStorage.setItem('draftSubject', formik.values.subject);
+                    window.location.href = '/user/compose';
+                  }}
+                  className="py-2 px-6 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 shadow-md transition"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Compose & Send
+                </motion.button>
               </div>
             </div>
           </motion.div>
         )}
       </motion.div>
 
-      {/* Why MailSmith Section */}
       <motion.div
         className="w-full max-w-5xl mt-16 grid grid-cols-1 md:grid-cols-2 gap-10 items-center"
         initial={{ opacity: 0, y: 40 }}
@@ -219,11 +306,8 @@ const GenerateEmail = () => {
           </p>
         </div>
       </motion.div>
-
-      <Footer />
     </motion.div>
   );
 };
 
 export default GenerateEmail;
-
