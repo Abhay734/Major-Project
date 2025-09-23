@@ -1,6 +1,11 @@
+'use client';
+import UseAppContext from '@/context/AppContext';
 import React from 'react';
 
 const Navbar = () => {
+
+  const { loggedIn, logout } = UseAppContext();
+
   return (
     <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 w-full z-50 shadow-md">
       <nav className="max-w-[85rem] mx-auto flex items-center justify-between py-4 px-4 sm:px-6 lg:px-8">
@@ -15,7 +20,7 @@ const Navbar = () => {
             MailSmith
           </span>
         </a>
-        
+
         {/* Nav Links */}
         <div className="hidden md:flex items-center gap-8">
           <a href="/" className="text-gray-700 dark:text-neutral-300 hover:text-purple-600 font-medium transition-colors duration-300">Home</a>
@@ -23,11 +28,20 @@ const Navbar = () => {
           <a href="/user/profile" className="text-gray-700 dark:text-neutral-300 hover:text-purple-600 font-medium transition-colors duration-300">Profile</a>
         </div>
 
+        {
+          loggedIn ? (
+            <div className="hidden md:flex items-center gap-3">
+              <button onClick={logout} className="py-2.5 px-5 rounded-full border border-gray-300 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-700 font-medium transition-all duration-300">Logout</button>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-3">
+              <a href="/login" className="py-2.5 px-5 rounded-full border border-gray-300 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-700 font-medium transition-all duration-300">Login</a>
+              <a href="/signup" className="py-2.5 px-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 font-medium transition-all duration-300 shadow-lg">Signup</a>
+            </div>
+          )
+        }
+
         {/* Auth Buttons */}
-        <div className="hidden md:flex items-center gap-3">
-          <a href="/login" className="py-2.5 px-5 rounded-full border border-gray-300 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-700 font-medium transition-all duration-300">Login</a>
-          <a href="/signup" className="py-2.5 px-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 font-medium transition-all duration-300 shadow-lg">Signup</a>
-        </div>
 
         {/* Mobile Menu Button */}
         <button type="button" className="md:hidden flex items-center p-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-700" aria-label="Toggle navigation">
