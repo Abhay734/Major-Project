@@ -97,7 +97,7 @@ const Home = () => {
 					millions worldwide.
 				</motion.p>
 				<motion.a
-					href='/advance'
+					href='/user/generate-email'
 					className='relative bg-white text-blue-600 font-semibold px-10 py-4 rounded-full shadow-xl hover:bg-blue-100 transition transform'
 					whileHover={{ scale: 1.1 }}
 					whileTap={{ scale: 0.95 }}
@@ -163,7 +163,7 @@ const Home = () => {
 				</div>
 			</div>
 
-			<Footer />
+			{/* <Footer /> */}
 		</div>
 	)
 }

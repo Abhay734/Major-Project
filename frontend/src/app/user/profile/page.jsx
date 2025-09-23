@@ -10,30 +10,34 @@ const Profile = () => {
   const [formData, setFormData] = useState({ name: '', email: '' });
 
   const getProfileData = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
     if (!token) {
-        toast.error("❌ You are not logged in. Please log in.");
-        window.location.href = '/signup';
-        return;
+      toast.error("❌ You are not logged in. Please log in.");
+      window.location.href = '/signup';
+      return;
     }
 
-    console.log("Token:", token); 
-    
+    console.log("Token:", token);
+
     axios.get(`${process.env.NEXT_PUBLIC_API_URL}/user/getuser`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
-    .then((result) => {
-        setProfileData(result.data); 
+      .then((result) => {
+        console.log(result.data);
+        
+        setProfileData(result.data);
         setFormData({ name: result.data.name, email: result.data.email });
         console.log("Profile data fetched successfully:", result.data);
-    })
-    .catch((err) => {
-        console.error("Error fetching profile data:", err.response);
-        toast.error("❌ Error fetching profile data");
-    });
+      })
+      .catch((err) => {
+        console.error("Error fetching profile data:", err);
+        // FIX: Check if err.response exists before trying to access it
+        const errorMessage = err.response?.data?.message || 'An unexpected error occurred.';
+        toast.error(`❌ Error: ${errorMessage}`);
+      });
   };
 
   const handleEditClick = () => {
@@ -41,27 +45,29 @@ const Profile = () => {
   };
 
   const handleSaveClick = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
     if (!token) {
-        toast.error("❌ You are not logged in. Please log in.");
-        return;
+      toast.error("❌ You are not logged in. Please log in.");
+      return;
     }
-    
+
     axios.put(`${process.env.NEXT_PUBLIC_API_URL}/user/updateuser`, formData, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
-    .then((result) => {
+      .then((result) => {
         setProfileData(result.data.user);
         setIsEditing(false);
         toast.success("✅ Profile updated successfully!");
-    })
-    .catch((err) => {
-        console.error("Error updating profile:", err.response);
-        toast.error("❌ Error updating profile");
-    });
+      })
+      .catch((err) => {
+        console.error("Error updating profile:", err);
+        // FIX: Check if err.response exists before trying to access it
+        const errorMessage = err.response?.data?.message || 'An unexpected error occurred.';
+        toast.error(`❌ Error: ${errorMessage}`);
+      });
   };
 
   const handleChange = (e) => {
@@ -87,13 +93,12 @@ const Profile = () => {
           Profile
         </h1>
 
-        {/* User Information Card */}
         <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6 mb-6 flex items-center space-x-6">
           <div className="flex-shrink-0">
-            <img 
-              className="h-24 w-24 rounded-full" 
-              src="https://via.placeholder.com/150" 
-              alt="Profile" 
+            <img
+              className="h-24 w-24 rounded-full"
+              src="https://via.placeholder.com/150"
+              alt="Profile"
             />
           </div>
           <div className="flex-grow">
@@ -140,7 +145,7 @@ const Profile = () => {
               <div>
                 <p className="text-xl font-semibold text-gray-900">{profileData.name || 'User Name'}</p>
                 <p className="text-gray-600">{profileData.email}</p>
-                <button 
+                <button
                   onClick={handleEditClick}
                   className="mt-2 text-sm text-blue-500 hover:text-blue-700 font-medium"
                 >
@@ -151,7 +156,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Subscription and Usage Card */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <div className="bg-gray-50 rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-800 mb-2">Your Plan</h2>
@@ -173,7 +177,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* History Section (as a starting point) */}
         <div className="bg-gray-50 rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Recent Emails</h2>
           <ul className="divide-y divide-gray-200">

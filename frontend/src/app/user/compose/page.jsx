@@ -10,6 +10,15 @@ export default function ComposePage() {
   const router = useRouter();
   const [token, setToken] = useState(null);
 
+  const [formData, setFormData] = useState({
+    to: '',
+    subject: '',
+    body: ''
+  });
+
+  const [status, setStatus] = useState({ type: '', message: '' });
+  const [isSending, setIsSending] = useState(false);
+
   useEffect(() => {
     const storedToken = localStorage.getItem('authToken');
     if (!storedToken) {
@@ -17,15 +26,20 @@ export default function ComposePage() {
     } else {
       setToken(storedToken);
     }
-  }, [router]);
 
-  const [formData, setFormData] = useState({
-    to: '',
-    subject: '',
-    body: ''
-  });
-  const [status, setStatus] = useState({ type: '', message: '' });
-  const [isSending, setIsSending] = useState(false);
+    // ✅ Load draft email + subject from GenerateEmail
+    const draftBody = localStorage.getItem('draftEmail');
+    const draftSubject = localStorage.getItem('draftSubject');
+    if (draftBody || draftSubject) {
+      setFormData(prev => ({
+        ...prev,
+        subject: draftSubject || prev.subject,
+        body: draftBody || prev.body
+      }));
+      localStorage.removeItem('draftEmail');
+      localStorage.removeItem('draftSubject');
+    }
+  }, [router]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,13 +49,11 @@ export default function ComposePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
     if (!formData.to || !formData.subject || !formData.body) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.to)) {
       toast.error('Please enter a valid email address');
@@ -70,7 +82,6 @@ export default function ComposePage() {
           message: `Email sent successfully! Message ID: ${response.data.messageId}`
         });
 
-        // Reset form
         setFormData({
           to: '',
           subject: '',
