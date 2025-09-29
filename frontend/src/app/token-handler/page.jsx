@@ -3,6 +3,9 @@ import { useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import UseAppContext from '@/context/AppContext';
 
+
+const ISSERVER = typeof window ===undefined;
+
 const GoogleAuthCallback = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -24,7 +27,7 @@ const GoogleAuthCallback = () => {
         } else {
             // Store the token and user data in local storage or a state management system
             // For this example, we will use local storage
-            localStorage.setItem('authToken', token);
+            !ISSERVER &&  localStorage.setItem('authToken', token);
             setLoggedIn(true);
             // localStorage.setItem('user', user); // Note: You might want to parse this if it's a JSON string
 

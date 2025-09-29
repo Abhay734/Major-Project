@@ -7,6 +7,9 @@ import { Toaster, toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
+
+const ISSERVER = typeof window === undefined;
+
 const Login = () => {
   const router = useRouter();
 
@@ -29,7 +32,7 @@ const Login = () => {
         const res = await axios.post('http://localhost:5000/user/authenticate', values);
         if (res.data.token) {
           toast.success('Login successful!');
-          localStorage.setItem('token', res.data.token);
+          !ISSERVER && localStorage.setItem('authToken', res.data.token);
           router.push('/user/profile');
         } else {
           toast.error(res.data.message || 'Login failed');
@@ -55,7 +58,7 @@ const Login = () => {
 
   return (
     <div className="bg-slate-100 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Toaster />
+      {/* <Toaster /> */}
       <motion.div
         className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg"
         variants={containerVariants}

@@ -27,7 +27,9 @@ export default function RootLayout({ children }) {
         <AppProvider>
           <Toaster position="top-center" />
           <Navbar />
-          <main>{children}</main>
+          <main>
+            {children}
+          </main>
           <Footer />
         </AppProvider>
       </body>
