@@ -87,7 +87,7 @@ const ManageTemplate = () => {
   };
 
   return (
-    <Suspense fallback={<div></div>}>
+    
       <div className="max-w-4xl mx-auto p-6">
         <Toaster position="top-center" />
         <h1 className="text-3xl font-bold mb-6">Manage Templates</h1>
@@ -165,7 +165,6 @@ const ManageTemplate = () => {
           )}
         </div>
       </div>
-    </Suspense>
   );
 };
 

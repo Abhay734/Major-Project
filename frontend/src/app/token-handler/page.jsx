@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import UseAppContext from '@/context/AppContext';
 
@@ -40,7 +40,8 @@ const GoogleAuthCallback = () => {
 
     // A simple loading screen while the redirect is in progress
     return (
-        <div style={{
+        <Suspense>
+             <div style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -51,6 +52,8 @@ const GoogleAuthCallback = () => {
             <h1>Signing you in...</h1>
             <p>Please wait while we complete your authentication.</p>
         </div>
+        </Suspense>
+        
     );
 };
 
