@@ -29,6 +29,9 @@ const Footer = () => (
                         <img src="/icons/github.svg" alt="GitHub" className="h-6 w-6" />
                     </a>
                 </div> */}
+
+
+                
             </div>
             <div className="mt-6 text-center text-xs text-gray-500">
                 <p>© {new Date().getFullYear()} MailSmith — All rights reserved.</p>

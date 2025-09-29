@@ -7,6 +7,9 @@ import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 
+
+const ISSERVER = typeof window ===undefined;
+
 const ManageTemplate = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,7 +48,7 @@ const ManageTemplate = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = !ISSERVER && localStorage.getItem('token');
       if (!token) {
         toast.error('You must be logged in to save a template.');
         setLoading(false);

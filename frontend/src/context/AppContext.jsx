@@ -1,15 +1,24 @@
 'use client';
-const { useRouter } = require("next/navigation");
-const { createContext, useState, useContext } = require("react");
+import { useRouter } from "next/navigation";
+import { createContext, useState, useContext, useEffect } from "react";
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
 
-  const token = localStorage.getItem('authToken');
   const router = useRouter();
 
-  const [loggedIn, setLoggedIn] = useState(token ? true : false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setLoggedIn(true);
+    }
+    setLoading(false);
+  }, []);
+
 
   const logout = () => {
     localStorage.removeItem('authToken');
@@ -17,7 +26,7 @@ export const AppProvider = ({ children }) => {
     router.replace('/login');
   }
 
-  return <AppContext.Provider value={{ loggedIn, setLoggedIn, logout }} >
+  return <AppContext.Provider value={{ loggedIn, setLoggedIn, logout, loading }} >
     {children}
   </AppContext.Provider>
 

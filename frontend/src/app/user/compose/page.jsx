@@ -5,10 +5,14 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import UseAppContext from '@/context/AppContext';
+
+const ISSERVER = typeof window === 'undefined';
 
 export default function ComposePage() {
   const router = useRouter();
-  const [token, setToken] = useState(null);
+  // Ensure your context returns authToken and loggedIn status
+  const { authToken, loggedIn } = UseAppContext(); 
 
   const [formData, setFormData] = useState({
     to: '',
@@ -18,28 +22,51 @@ export default function ComposePage() {
 
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSending, setIsSending] = useState(false);
+  const [isAuthCheckComplete, setIsAuthCheckComplete] = useState(false);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    if (!storedToken) {
+    // 1. Initial Authentication Check
+    if (loggedIn === false) { // Explicitly check for false
+      toast.error("Please login to access this page");
       router.push('/login');
-    } else {
-      setToken(storedToken);
+      return; 
+    }
+    
+    // Set check as complete once we know the user is logged in (or redirected)
+    if (loggedIn !== undefined) {
+      setIsAuthCheckComplete(true);
     }
 
-    // ✅ Load draft email + subject from GenerateEmail
-    const draftBody = localStorage.getItem('draftEmail');
-    const draftSubject = localStorage.getItem('draftSubject');
-    if (draftBody || draftSubject) {
-      setFormData(prev => ({
-        ...prev,
-        subject: draftSubject || prev.subject,
-        body: draftBody || prev.body
-      }));
-      localStorage.removeItem('draftEmail');
-      localStorage.removeItem('draftSubject');
+    // 2. Load draft email + subject (only if client-side and loggedIn is true)
+    if (loggedIn && !ISSERVER) {
+      const draftBody = localStorage.getItem('draftEmail');
+      const draftSubject = localStorage.getItem('draftSubject');
+      
+      let draftLoaded = false;
+      
+      if (draftBody || draftSubject) {
+        setFormData(prev => ({
+          ...prev,
+          // Use the draft subject/body, falling back to current state if null
+          subject: draftSubject || prev.subject,
+          body: draftBody || prev.body
+        }));
+        draftLoaded = true;
+        
+        // Clear drafts after loading
+        localStorage.removeItem('draftEmail');
+        localStorage.removeItem('draftSubject');
+      }
+      
+      if (draftLoaded) {
+          toast.success('Generated email loaded successfully!');
+      } else if (loggedIn) {
+          // Only show this if they are logged in but no draft was found
+          toast('No generated email draft found. Starting with a blank form.', { icon: '📝' });
+      }
     }
-  }, [router]);
+    
+  }, [loggedIn, router]); 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,6 +87,12 @@ export default function ComposePage() {
       return;
     }
 
+    if (!authToken) {
+      toast.error('Session expired. Please log in again.');
+      router.push('/login');
+      return;
+    }
+
     setIsSending(true);
     setStatus({ type: '', message: '' });
 
@@ -69,7 +102,7 @@ export default function ComposePage() {
         formData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           },
         }
@@ -101,7 +134,8 @@ export default function ComposePage() {
     }
   };
 
-  if (!token) {
+  // Show loading state while authentication is resolving
+  if (!isAuthCheckComplete || !loggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
@@ -109,10 +143,11 @@ export default function ComposePage() {
     );
   }
 
+  // The rest of your component renders here when authentication is confirmed
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Toaster position="top-center" />
-      
+
       <main className="p-6">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -121,7 +156,7 @@ export default function ComposePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <motion.h1 
+            <motion.h1
               className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -131,11 +166,11 @@ export default function ComposePage() {
             </motion.h1>
 
             {status.message && (
-              <motion.div 
+              <motion.div
                 className={`p-4 mb-6 rounded-lg ${status.type === 'success'
                   ? 'bg-green-100 text-green-800 border border-green-200'
                   : 'bg-red-100 text-red-800 border border-red-200'
-                }`}
+                  }`}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
@@ -202,7 +237,7 @@ export default function ComposePage() {
                 ></textarea>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="flex justify-end space-x-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -218,7 +253,7 @@ export default function ComposePage() {
                 >
                   Clear
                 </button>
-                
+
                 <button
                   type="submit"
                   disabled={
@@ -227,13 +262,12 @@ export default function ComposePage() {
                     !formData.subject.trim() ||
                     !formData.body.trim()
                   }
-                  className={`px-8 py-3 rounded-lg text-white font-semibold transition ${
-                    isSending
-                      ? 'bg-blue-400 cursor-not-allowed'
-                      : (!formData.to.trim() || !formData.subject.trim() || !formData.body.trim())
+                  className={`px-8 py-3 rounded-lg text-white font-semibold transition ${isSending
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : (!formData.to.trim() || !formData.subject.trim() || !formData.body.trim())
                       ? 'bg-slate-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 shadow-lg'
-                  }`}
+                    }`}
                 >
                   {isSending ? (
                     <div className="flex items-center space-x-2">
