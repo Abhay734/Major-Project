@@ -10,7 +10,7 @@ const Layout = ({ children }) => {
     const router = useRouter();
 
     useEffect(() => {
-        if(!loggedIn) {
+        if (!loggedIn) {
             toast.error("Please login to access this page");
             router.replace('/login');
         }
