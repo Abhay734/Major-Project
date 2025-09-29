@@ -71,21 +71,107 @@ router.delete('/delete/:id', (req, res) => {
         });
 });
 
-router.put('/update/:id', (req, res) => {
-    UserModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
+// Update user profile endpoint
+router.put('/updateuser', authenticate, (req, res) => {
+    const userId = req.user.id; // Get user ID from JWT token
+    const updateData = req.body;
+
+    // Remove sensitive fields that shouldn't be updated directly
+    delete updateData.password;
+    delete updateData._id;
+    delete updateData.__v;
+    delete updateData.googleTokens; // Prevent direct manipulation of Google tokens
+
+    console.log('Updating user:', userId, 'with data:', updateData);
+
+    UserModel.findByIdAndUpdate(
+        userId,
+        updateData,
+        { 
+            new: true, // Return updated document
+            runValidators: true // Run schema validation
+        }
+    )
+    .select('-password -googleTokens') // Exclude sensitive fields from response
+    .then((result) => {
+        if (!result) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+
+        console.log('User updated successfully:', result);
+        res.status(200).json({ 
+            success: true,
+            message: 'Profile updated successfully',
+            user: result 
+        });
+    })
+    .catch((err) => {
+        console.error('Error updating user:', err);
+        
+        // Handle validation errors
+        if (err.name === 'ValidationError') {
+            const errors = Object.values(err.errors).map(e => e.message);
+            return res.status(400).json({ 
+                success: false,
+                message: 'Validation failed',
+                errors: errors
+            });
+        }
+
+        // Handle duplicate email error
+        if (err.code === 11000) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Email already exists'
+            });
+        }
+
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to update profile',
+            error: err.message 
+        });
+    });
+});
+
+// Add endpoint to get current user profile (enhanced version)
+router.get('/profile', authenticate, (req, res) => {
+    const userId = req.user.id;
+
+    UserModel.findById(userId)
+        .select('-password -googleTokens') // Exclude sensitive fields
         .then((result) => {
-            res.status(200).json(result);
-        }).catch((err) => {
-            console.log(err);
-            res.status(500).json(err);
+            if (!result) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'User not found' 
+                });
+            }
+
+            res.status(200).json({ 
+                success: true,
+                user: result 
+            });
+        })
+        .catch((err) => {
+            console.error('Error fetching user profile:', err);
+            res.status(500).json({ 
+                success: false,
+                message: 'Failed to fetch profile',
+                error: err.message 
+            });
         });
 });
 
+// Update the existing authenticate endpoint to return user data
 router.post('/authenticate', (req, res) => {
     UserModel.findOne(req.body)
         .then((result) => {
             if (result) {
-                // generate token
+                // Generate token
                 const { _id, name, email } = result;
                 const payload = { _id, name, email };
                 jwt.sign(
@@ -95,18 +181,40 @@ router.post('/authenticate', (req, res) => {
                     (err, token) => {
                         if (err) {
                             console.log(err);
-                            res.status(500).json(err);
+                            res.status(500).json({ 
+                                success: false,
+                                message: 'Token generation failed',
+                                error: err.message 
+                            });
                         } else {
-                            res.status(200).json({ token, name, email });
+                            // Return user data along with token
+                            res.status(200).json({ 
+                                success: true,
+                                token, 
+                                user: {
+                                    id: _id,
+                                    name, 
+                                    email,
+                                    // Add other non-sensitive fields as needed
+                                }
+                            });
                         }
                     }
                 )
             } else {
-                res.status(403).json({ message: 'login failed' });
+                res.status(403).json({ 
+                    success: false,
+                    message: 'Invalid credentials' 
+                });
             }
-        }).catch((err) => {
+        })
+        .catch((err) => {
             console.log(err);
-            res.status(500).json(err);
+            res.status(500).json({ 
+                success: false,
+                message: 'Authentication failed',
+                error: err.message 
+            });
         });
 });
 

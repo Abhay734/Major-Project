@@ -1,27 +1,29 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import UseAppContext from '@/context/AppContext';
 
 const GenerateEmail = () => {
   const [result, setResult] = useState('');
-  const { authToken, loading: contextLoading } = UseAppContext();
+  const [token, setToken] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  
 
   useEffect(() => {
-    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('authToken');
+      setToken(storedToken);
+    }
   }, []);
 
   const saveEmail = async () => {
-    if (!authToken) {
+    if (!token) {
       toast.error('You must be logged in to save an email.');
       return;
     }
@@ -32,7 +34,7 @@ const GenerateEmail = () => {
         prompt: formik.values.scenario,
       }, {
         headers: {
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${token}`
         }
       });
       toast.success('Email saved as template!');
@@ -56,15 +58,15 @@ const GenerateEmail = () => {
       setResult('');
       setIsGenerating(true);
       try {
-        const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generator/generate`, {
+        const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/generator/generate`, { 
           scenario: values.scenario,
           purpose: values.purpose,
           subject: values.subject,
           tone: values.tone,
         }, {
-          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
-
+        
         let emailHtml = '';
         if (res.data.email) {
           const htmlMatch = res.data.email.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
@@ -86,15 +88,6 @@ const GenerateEmail = () => {
       }
     },
   });
-
-  // Show loading state until component is mounted and context is ready
-  if (!isMounted || contextLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <h2>Loading...</h2>
-      </div>
-    );
-  }
 
   return (
     <motion.div
@@ -216,7 +209,7 @@ const GenerateEmail = () => {
                 </>
               ) : 'Generate Email'}
             </motion.button>
-
+            
             <motion.button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -257,7 +250,7 @@ const GenerateEmail = () => {
                 >
                   Save as Template
                 </motion.button>
-
+                
                 <motion.button
                   onClick={() => {
                     navigator.clipboard.writeText(result);
@@ -272,10 +265,9 @@ const GenerateEmail = () => {
 
                 <motion.button
                   onClick={() => {
-                    // Store in memory instead of localStorage to avoid hydration issues
-                    const draftData = { email: result, subject: formik.values.subject };
-                    sessionStorage.setItem('draftEmail', JSON.stringify(draftData));
-                    router.push('/user/compose');
+                    localStorage.setItem('draftEmail', result);
+                    localStorage.setItem('draftSubject', formik.values.subject);
+                    window.location.href = '/user/compose';
                   }}
                   className="py-2 px-6 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 shadow-md transition"
                   whileHover={{ scale: 1.05 }}
