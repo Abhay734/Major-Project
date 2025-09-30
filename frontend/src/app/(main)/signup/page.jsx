@@ -22,7 +22,7 @@ const Signup = () => {
     }),
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
-        const res = await axios.post('http://localhost:5000/user/add', values);
+        const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/add`, values);
         if (res.status === 200) {
           toast.success('Signup successful!');
           resetForm();

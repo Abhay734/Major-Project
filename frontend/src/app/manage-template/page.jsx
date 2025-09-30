@@ -33,7 +33,7 @@ const ManageTemplate = () => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/template/getall');
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/template/getall`);
       setTemplates(response.data || []);
     } catch (error) {
       console.error('Failed to fetch templates:', error);
@@ -65,7 +65,7 @@ const ManageTemplate = () => {
         prompt: templatePrompt,
       };
 
-      await axios.post('http://localhost:5000/template/add', newTemplate, {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/template/add`, newTemplate, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

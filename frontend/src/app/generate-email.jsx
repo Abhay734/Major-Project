@@ -17,7 +17,7 @@ const GenerateEmail = () => {
     onSubmit: async (values, { setSubmitting }) => {
       setResult('');
       try {
-        const res = await axios.post('http://localhost:5000/email/generate', { scenario: values.scenario });
+        const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/email/generate`, { scenario: values.scenario });
         if (res.data.email) {
           setResult(res.data.email);
           toast.success('Email generated!');
